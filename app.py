@@ -97,7 +97,7 @@ def render_template(result="", a_type="자율활동", a_name="", a_date="", a_ke
 </head>
 <body>
     <div class="container">
-        <div class="header">📝 <h1>생기부 문장 생성기 (400byte)</h1></div>
+        <div class="header">📝 <h1>진로 자율활동 문장 생성기 (400byte)</h1></div>
         <form method="post" action="/generate">
             <div class="form-group">
                 <label>활동 구분</label>
@@ -115,7 +115,7 @@ def render_template(result="", a_type="자율활동", a_name="", a_date="", a_ke
                 <input type="text" name="a_name" value="{html.escape(a_name)}" placeholder="활동명 입력" required>
             </div>
             <div class="form-group">
-                <label>관찰 기록 (키워드)</label>
+                <label>활동 내용 (키워드)</label>
                 <textarea name="a_keywords" rows="3" placeholder="핵심 행동과 성취를 입력하세요">{html.escape(a_keywords)}</textarea>
             </div>
             <button type="submit" class="btn-submit">전문 문장 생성</button>
