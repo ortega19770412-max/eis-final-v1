@@ -11,7 +11,7 @@ from urllib.parse import parse_qs
 PORT = int(os.environ.get("PORT", 8000))
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# 2. 전문적인 문장 다듬기 로직 (불필요한 주어 제거 및 명사형 어미 강제)
+# 2. 전문적인 문장 다듬기 로직
 def clean_record_text(text):
     if not text: return text
     # 주어 제거 및 줄바꿈 정리
@@ -29,33 +29,35 @@ def clean_record_text(text):
         processed.append(sent + ".")
     return " ".join(processed)
 
-# 3. 프롬프트 및 API 호출 (300바이트 최적화)
+# 3. 프롬프트 및 API 호출 (600바이트 최적화)
 def build_expert_prompt(a_type, a_name, date, keywords):
     return f"""
-너는 고등학교 생활기록부 작성 전문가야. 다음 정보를 바탕으로 핵심만 압축해서 작성해.
+너는 고등학교 생활기록부 작성 전문가야. 다음 정보를 바탕으로 풍성하고 전문적인 문장을 작성해라.
 
 - 활동 구분: {a_type}
 - 활동 일자: {date}
 - 활동명: {a_name}
 - 관찰 키워드: {keywords}
 
-[작성 지침 - 분량 엄수]
-1. 분량: 전체 길이를 공백 포함 '한글 120자 내외'로 매우 짧게 작성할 것 (300바이트 제한).
-2. 구조: '{a_name}({date}) 활동에서'로 시작하고, 미사여구 없이 '행동-결과-성장' 위주로 서술할 것.
-3. 연결어: '특히', '또한' 등은 최소화하고 문장 간의 논리적 연결에 집중할 것.
-4. 문체: 모든 문장은 반드시 명사형 어미(~함, ~임, ~됨)로 끝낼 것.
+[작성 지침 - 분량 및 스타일]
+1. 분량: 공백 포함 '한글 250~280자 내외'로 작성할 것 (약 600바이트 분량).
+2. 시작: '{a_name}({date}) 활동에서' 또는 '{a_name}({date})에 참여하여'로 시작할 것.
+3. 스타일: 전문적인 교육 용어와 적절한 미사여구를 사용하여 학생의 우수성이 돋보이게 할 것.
+4. 구성: 활동의 동기 - 구체적인 노력/행동 - 깨달은 점 및 성장 과정이 논리적으로 연결되게 할 것.
+5. 문체: 모든 문장은 반드시 명사형 어미(~함, ~임, ~됨)로 끝낼 것.
+6. 연결어: '특히', '나아가', '이를 기반으로', '발휘함' 등을 활용하여 문장을 풍성하게 만들 것.
 """
 
 def call_openai_api(prompt):
-    if not OPENAI_API_KEY: return "에러: API Key가 설정되지 않았습니다 (Render 환경변수를 확인하세요)."
+    if not OPENAI_API_KEY: return "에러: API Key가 설정되지 않았습니다."
     url = "https://api.openai.com/v1/chat/completions"
     payload = {
         "model": "gpt-4o-mini",
         "messages": [
-            {"role": "system", "content": "생활기록부 핵심 요약 전문가. 아주 간결하고 명확한 문장을 작성함."},
+            {"role": "system", "content": "생활기록부 작성 전문가. 풍부하고 논리적인 교육적 문장을 작성함."},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.5 # 일관성을 위해 온도를 조금 낮춤
+        "temperature": 0.7 
     }
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, method="POST",
@@ -78,24 +80,26 @@ def render_template(result="", a_type="자율활동", a_name="", a_date="", a_ke
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>생기부 문장 생성기 (압축 모드)</title>
+    <title>생기부 문장 생성기 (600byte 모드)</title>
     <style>
-        body {{ font-family: 'Pretendard', -apple-system, sans-serif; background-color: #f8fafc; display: flex; justify-content: center; padding: 20px; }}
-        .container {{ width: 100%; max-width: 500px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }}
-        .header {{ text-align: center; margin-bottom: 20px; }}
-        .header h1 {{ font-size: 18px; color: #1e293b; margin: 0; }}
-        .form-group {{ margin-bottom: 15px; }}
-        label {{ display: block; font-weight: 600; margin-bottom: 5px; color: #475569; font-size: 13px; }}
-        input, select, textarea {{ width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }}
-        .btn-submit {{ width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 5px; }}
-        .result-box {{ margin-top: 15px; padding: 15px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; position: relative; }}
-        .copy-btn {{ position: absolute; top: 8px; right: 8px; background: #64748b; color: white; border: none; padding: 3px 7px; border-radius: 4px; font-size: 11px; cursor: pointer; }}
-        .byte-info {{ font-size: 11px; color: #94a3b8; margin-top: 5px; }}
+        body {{ font-family: 'Pretendard', -apple-system, sans-serif; background-color: #f1f5f9; display: flex; justify-content: center; padding: 20px; }}
+        .container {{ width: 100%; max-width: 550px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }}
+        .header {{ display: flex; align-items: center; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }}
+        .header h1 {{ font-size: 20px; color: #1e293b; margin: 0; }}
+        .form-group {{ margin-bottom: 18px; }}
+        label {{ display: block; font-weight: 600; margin-bottom: 6px; color: #475569; font-size: 14px; }}
+        input, select, textarea {{ width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 15px; }}
+        input:focus, textarea:focus {{ border-color: #2563eb; outline: none; ring: 2px; }}
+        .btn-submit {{ width: 100%; padding: 15px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }}
+        .btn-submit:hover {{ background: #1d4ed8; }}
+        .result-box {{ margin-top: 25px; padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; position: relative; }}
+        .copy-btn {{ position: absolute; top: 15px; right: 15px; background: #64748b; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }}
+        #rt {{ width: 100%; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; font-size: 15px; line-height: 1.6; margin-top: 10px; background: white; color: #334155; }}
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">📝 <h1>생기부 문장 생성기 (압축 모드)</h1></div>
+        <div class="header">🎓 <h1>생기부 문장 생성기 (표준)</h1></div>
         <form method="post" action="/generate">
             <div class="form-group">
                 <label>활동 구분</label>
@@ -110,22 +114,22 @@ def render_template(result="", a_type="자율활동", a_name="", a_date="", a_ke
             </div>
             <div class="form-group">
                 <label>활동명</label>
-                <input type="text" name="a_name" value="{html.escape(a_name)}" placeholder="활동명" required>
+                <input type="text" name="a_name" value="{html.escape(a_name)}" placeholder="예: 학급 자치활동 등" required>
             </div>
             <div class="form-group">
-                <label>관찰 키워드</label>
-                <textarea name="a_keywords" rows="3" placeholder="핵심 행동 위주로 입력">{html.escape(a_keywords)}</textarea>
+                <label>관찰 키워드 및 주요 행동</label>
+                <textarea name="a_keywords" rows="4" placeholder="학생의 구체적인 활동 내용이나 성취를 자유롭게 입력하세요">{html.escape(a_keywords)}</textarea>
             </div>
-            <button type="submit" class="btn-submit">압축 생성하기</button>
+            <button type="submit" class="btn-submit">문장 생성 및 다듬기</button>
         </form>
-        {"<div class='result-box'><button class='copy-btn' onclick='copyText()'>복사</button><label>생성 결과 (약 300byte)</label><textarea id='rt' rows='5' readonly style='background:white; margin-top:5px;'>"+res_safe+"</textarea></div>" if result else ""}
+        {"<div class='result-box'><button class='copy-btn' onclick='copyText()'>복사</button><label>✨ 생성 결과 (약 600byte)</label><textarea id='rt' rows='8' readonly>"+res_safe+"</textarea></div>" if result else ""}
     </div>
-    <script>function copyText(){{var t=document.getElementById("rt");t.select();document.execCommand("copy");alert("복사되었습니다!");}}</script>
+    <script>function copyText(){{var t=document.getElementById("rt");t.select();document.execCommand("copy");alert("클립보드에 복사되었습니다!");}}</script>
 </body>
 </html>
 """
 
-# 5. 서버 실행 제어
+# 5. 서버 핸들러
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -155,5 +159,5 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     server_address = ('', PORT)
     httpd = HTTPServer(server_address, Handler)
-    print(f"압축 생성기 서버 시작: 포트 {PORT}")
+    print(f"Server started on port {PORT}")
     httpd.serve_forever()
